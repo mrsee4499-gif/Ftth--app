@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="lo" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="FTTH Tracker"/>
+<meta name="theme-color" content="#0d1117"/>
+<title>FTTH Issue Tracker</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
+<style>
+/* ══════ VARIABLES ══════ */
+:root{
+  --ac:#f97316;--ac2:rgba(249,115,22,0.15);--ac3:#ea6700;
+  --b0:#0d1117;--b1:#161b22;--b2:#1c2330;--b3:#212936;
+  --br:rgba(255,255,255,0.07);--brs:rgba(255,255,255,0.15);
+  --t1:#e6edf3;--t2:#8b949e;--t3:#484f58;
+  --sh:0 4px 24px rgba(0,0,0,.5);--cs:0 2px 12px rgba(0,0,0,.4);
+  --gl:rgba(255,255,255,.03);--ib:#0d1117;--bb:rgba(255,255,255,.06);
+  --ff:'IBM Plex Sans','Noto Sans Lao',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+  --r:10px;--rl:16px;--tr:.2s cubic-bezier(.4,0,.2,1);
+}
+[data-theme=light]{
+  --b0:#f0f2f5;--b1:#fff;--b2:#f6f8fa;--b3:#eaecef;
+  --br:rgba(0,0,0,.08);--brs:rgba(0,0,0,.18);
+  --t1:#1a1f2e;--t2:#57606a;--t3:#9198a1;
+  --sh:0 4px 24px rgba(0,0,0,.1);--cs:0 2px 12px rgba(0,0,0,.08);
+  --gl:rgba(255,255,255,.7);--ib:#fff;--bb:rgba(0,0,0,.05);
+}
+
+/* ══════ RESET ══════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--ff);background:var(--b0);color:var(--t1);min-height:100vh;font-size:14px;line-height:1.6;transition:background var(--tr),color var(--tr);overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--brs);border-radius:4px}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none}
+img{max-width:100%;display:block}
+
+/* ══════ BUTTONS ══════ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-size:.875rem;font-weight:600;transition:all var(--tr);white-space:nowrap;border:none;cursor:pointer}
+.btn-primary{background:var(--ac);color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.3)}
+.btn-primary:hover{background:var(--ac3);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-full{width:100%;font-size:1rem;padding:13px}
+.btn-outline{background:transparent;color:var(--t1);border:1px solid var(--brs)}
+.btn-outline:hover{background:var(--b2);border-color:var(--ac);color:var(--ac)}
+.btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
+.btn-success{background:#22c55e;color:#fff}.btn-success:hover{background:#16a34a}
+.btn-ghost{background:transparent;color:var(--t2);padding:6px 10px}
+.btn-ghost:hover{background:var(--bb);color:var(--t1)}
+.btn-sm{padding:6px 12px;font-size:.8rem}
+.btn-icon{padding:7px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* ══════ FORM ══════ */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;background:var(--ib);border:1px solid var(--brs);border-radius:var(--r);color:var(--t1);font-size:.875rem;transition:border-color var(--tr),box-shadow var(--tr)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac2)}
+.fg select option{background:var(--b1)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-full{grid-column:1/-1}
+@media(max-width:480px){.form-grid{grid-template-columns:1fr}}
+
+/* ══════ SETUP SCREEN ══════ */
+#screen-setup{position:fixed;inset:0;z-index:1000;background:var(--b0);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.setup-wrap{width:100%;max-width:520px;margin:auto}
+.setup-logo{text-align:center;margin-bottom:28px}
+.setup-logo-icon{width:64px;height:64px;background:var(--ac);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:12px;box-shadow:0 8px 24px rgba(249,115,22,.3)}
+.setup-logo h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.setup-logo p{color:var(--t2);font-size:.85rem;margin-top:4px}
+
+.tab-switch{display:flex;background:var(--b2);border:1px solid var(--br);border-radius:var(--r);padding:4px;margin-bottom:20px;gap:4px}
+.tab-sw-btn{flex:1;padding:9px;border-radius:8px;background:transparent;color:var(--t2);font-size:.85rem;font-weight:600;transition:all var(--tr);text-align:center}
+.tab-sw-btn.active{background:var(--b1);color:var(--t1);box-shadow:var(--cs)}
+
+.setup-card{background:var(--b1);border:1px solid var(--brs);border-radius:var(--rl);padding:28px;box-shadow:var(--sh)}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.step{display:flex;gap:12px;align-items:flex-start;background:var(--b2);border:1px solid var(--br);border-radius:10px;padding:12px 14px}
+.step-num{min-width:24px;height:24px;border-radius:50%;background:var(--ac);color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:.82rem;line-height:1.7;color:var(--t1)}
+.step-text a{color:var(--ac);font-weight:600}
+.step-text code{background:var(--b3);padding:1px 6px;border-radius:4px;font-family:var(--fm);font-size:.76rem}
+.step-text strong{color:var(--ac)}
+
+.info-box{background:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:11px 14px;font-size:.8rem;color:var(--ac);line-height:1.7;margin-top:14px}
+.info-box code{background:rgba(249,115,22,.2);padding:1px 5px;border-radius:3px;font-family:var(--fm);font-size:.75rem}
+.err-msg{color:#ef4444;font-size:.8rem;margin-top:8px;display:none;padding:8px 12px;background:rgba(239,68,68,.1);border-radius:7px;border:1px solid rgba(239,68,68,.3)}
+
+/* Team code box */
+.team-code-box{background:var(--b2);border:1px solid var(--brs);border-radius:var(--r);padding:14px;font-family:var(--fm);font-size:.7rem;word-break:break-all;line-height:1.6;color:var(--t1);max-height:80px;overflow-y:auto;cursor:pointer;transition:border-color var(--tr)}
+.team-code-box:hover{border-color:var(--ac)}
+.copy-btn-row{display:flex;gap:8px;margin-top:10px}
+
+/* ══════ LOGIN ══════ */
+#screen-login{position:fixed;inset:0;z-index:900;background:var(--b0);display:none;align-items:center;justify-content:center;padding:16px;overflow:hidden}
+#screen-login.show{display:flex}
+.login-bg{position:absolute;inset:0;background-image:linear-gradient(var(--br) 1px,transparent 1px),linear-gradient(90deg,var(--br) 1px,transparent 1px);background-size:40px 40px;opacity:.5}
+.login-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,var(--ac2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.login-card{position:relative;z-index:1;background:var(--b1);border:1px solid var(--brs);border-radius:var(--rl);padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--sh)}
+.login-head{text-align:center;margin-bottom:26px}
+.login-logo-icon{width:54px;height:54px;background:var(--ac);border-radius:13px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:24px}
+.login-head h1{font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+.login-head p{color:var(--t2);font-size:.8rem;margin-top:3px}
+.mode-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);border-radius:20px;padding:3px 10px;font-size:.7rem;color:var(--ac);font-weight:600;margin-top:7px}
+#login-err{color:#ef4444;font-size:.8rem;text-align:center;margin-top:9px;display:none}
+.login-footer{text-align:center;margin-top:14px;font-size:.75rem;color:var(--t2)}
+.login-footer a{color:var(--ac);cursor:pointer}
+
+/* ══════ APP LAYOUT ══════ */
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:40px}
+#app.show{display:flex}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:var(--b1);border-bottom:1px solid var(--br);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;backdrop-filter:blur(12px)}
+.tb-left{display:flex;align-items:center;gap:11px}
+.tb-logo{width:32px;height:32px;border-radius:8px;overflow:hidden;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tb-logo img{width:100%;height:100%;object-fit:cover}
+.tb-name{font-weight:700;font-size:.92rem;letter-spacing:-.01em}
+.tb-sub{font-size:.67rem;color:var(--t2);font-family:var(--fm)}
+.tb-right{display:flex;align-items:center;gap:6px}
+.user-chip{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bb);border:1px solid var(--br);border-radius:7px;font-size:.78rem;font-weight:500}
+.uav{width:20px;height:20px;border-radius:50%;background:var(--ac);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sync-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:600}
+.sync-pill.ok{background:rgba(34,197,94,.12);color:#4ade80}
+.sync-pill.busy{background:rgba(245,158,11,.12);color:#fbbf24}
+.sync-pill.err{background:rgba(239,68,68,.12);color:#f87171}
+@keyframes spin{to{transform:rotate(360deg)}}.sp{display:inline-block;animation:spin 1s linear infinite}
+
+/* MAIN */
+.main{flex:1;padding:18px 20px;max-width:1400px;width:100%;margin:0 auto}
+
+/* NAV */
+.nav{display:flex;gap:3px;background:var(--b2);border:1px solid var(--br);border-radius:var(--r);padding:3px;margin-bottom:18px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav-btn{padding:7px 15px;border-radius:7px;background:transparent;color:var(--t2);font-size:.82rem;font-weight:500;transition:all var(--tr);white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.nav-btn:hover{color:var(--t1);background:var(--bb)}
+.nav-btn.on{background:var(--b1);color:var(--t1);box-shadow:var(--cs)}
+.nbadge{background:var(--ac);color:#fff;border-radius:10px;padding:1px 6px;font-size:.67rem}
+
+.panel{display:none}.panel.on{display:block}
+
+/* ══════ DASHBOARD ══════ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:18px}
+.sc{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:18px 20px;position:relative;overflow:hidden;transition:transform var(--tr)}
+.sc:hover{transform:translateY(-2px)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac);border-radius:var(--rl) var(--rl) 0 0}
+.sc.gr::before{background:#22c55e}.sc.bl::before{background:#3b82f6}.sc.yl::before{background:#f59e0b}.sc.rd::before{background:#ef4444}
+.sc-lbl{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin-bottom:7px}
+.sc-val{font-size:1.9rem;font-weight:700;letter-spacing:-.03em;font-family:var(--fm)}
+.sc-sub{font-size:.7rem;color:var(--t2);margin-top:3px}
+.sc-ico{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.1}
+
+.dg{display:grid;grid-template-columns:1fr 300px;gap:16px}
+@media(max-width:880px){.dg{grid-template-columns:1fr}}
+.cc{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:20px}
+.cc-title{font-weight:700;font-size:.88rem;margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.cc-title .dot{width:7px;height:7px;border-radius:50%;background:var(--ac)}
+.ch{position:relative;height:220px}
+
+.act-list{display:flex;flex-direction:column;gap:7px;max-height:280px;overflow-y:auto}
+.act-item{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;background:var(--b2);border-radius:7px;border-left:3px solid var(--ac)}
+.act-meta{flex:1;min-width:0}
+.act-name{font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act-det{font-size:.7rem;color:var(--t2)}
+.act-time{font-size:.67rem;color:var(--t3);font-family:var(--fm);white-space:nowrap}
+
+.tr-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--br)}
+.tr-row:last-child{border-bottom:none}
+.tr-name{font-size:.82rem;font-weight:500;min-width:95px}
+.tr-bar-w{flex:1;height:5px;background:var(--b3);border-radius:3px;overflow:hidden}
+.tr-bar{height:100%;background:var(--ac);border-radius:3px;transition:width .8s ease}
+.tr-cnt{font-size:.76rem;font-family:var(--fm);color:var(--t2);min-width:20px;text-align:right}
+
+/* ══════ RECORDS ══════ */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:15px;align-items:center}
+.sw{position:relative;flex:1;min-width:180px}
+.sw input{width:100%;padding:8px 11px 8px 34px;background:var(--b1);border:1px solid var(--brs);border-radius:var(--r);color:var(--t1);font-size:.85rem;transition:border-color var(--tr),box-shadow var(--tr)}
+.sw input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac2)}
+.sw-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none;font-size:13px}
+.fsel{padding:7px 10px;background:var(--b1);border:1px solid var(--brs);border-radius:var(--r);color:var(--t2);font-size:.78rem}
+.fsel:focus{border-color:var(--ac)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{padding:4px 12px;border:1px solid var(--brs);border-radius:20px;background:transparent;color:var(--t2);font-size:.76rem;font-weight:500;transition:all var(--tr)}
+.chip:hover{border-color:var(--ac);color:var(--ac)}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.rinfo{font-size:.76rem;color:var(--t2);padding:5px 0}
+.rinfo span{font-family:var(--fm);background:var(--bb);padding:1px 7px;border-radius:4px}
+.vtog{display:flex;gap:3px;background:var(--b2);border:1px solid var(--br);border-radius:8px;padding:3px}
+.vbtn{width:28px;height:28px;border-radius:5px;background:transparent;color:var(--t2);font-size:13px;display:flex;align-items:center;justify-content:center;transition:all var(--tr)}
+.vbtn.on{background:var(--b1);color:var(--t1);box-shadow:var(--cs)}
+
+/* CARDS */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:13px}
+.rcard{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:17px;position:relative;transition:transform var(--tr),box-shadow var(--tr),border-color var(--tr);animation:ci .25s ease}
+@keyframes ci{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.rcard:hover{transform:translateY(-2px);box-shadow:var(--cs);border-color:var(--brs)}
+.rcard-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px}
+.rid{font-family:var(--fm);font-size:.67rem;color:var(--t3);background:var(--bb);padding:2px 7px;border-radius:4px}
+.ract{display:flex;gap:3px}
+.rname{font-weight:700;font-size:.93rem;margin-bottom:1px}
+.rphone{font-size:.76rem;color:var(--t2);font-family:var(--fm)}
+.rmeta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:11px 0}
+.mi{background:var(--b2);border-radius:7px;padding:6px 9px;border:1px solid var(--br)}
+.mi-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);font-weight:600;margin-bottom:2px}
+.mi-val{font-size:.78rem;font-weight:500}
+.rfoot{display:flex;align-items:center;justify-content:space-between;margin-top:11px;padding-top:11px;border-top:1px solid var(--br)}
+.rdate{font-size:.7rem;color:var(--t2);font-family:var(--fm)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%}
+.b-recv{background:rgba(59,130,246,.15);color:#60a5fa}.b-recv::before{background:#60a5fa}
+.b-prog{background:rgba(245,158,11,.15);color:#fbbf24}.b-prog::before{background:#fbbf24}
+.b-done{background:rgba(34,197,94,.15);color:#4ade80}.b-done::before{background:#4ade80}
+.rbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:.7rem;font-weight:500;background:var(--ac2);color:var(--ac)}
+
+/* TABLE */
+.twrap{overflow-x:auto;border-radius:var(--rl);border:1px solid var(--br)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead{background:var(--b2)}
+th{padding:9px 12px;text-align:left;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);white-space:nowrap;border-bottom:1px solid var(--br)}
+td{padding:10px 12px;border-bottom:1px solid var(--br);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gl)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--t3)}
+.empty-ico{font-size:2.5rem;margin-bottom:12px;opacity:.5}
+
+/* ══════ MODAL ══════ */
+.mover{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:14px}
+.mover.show{display:flex}
+.modal{background:var(--b1);border:1px solid var(--brs);border-radius:var(--rl);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:var(--sh);animation:mi .22s ease}
+@keyframes mi{from{opacity:0;transform:scale(.96) translateY(-7px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--br);position:sticky;top:0;background:var(--b1);z-index:1}
+.mtitle{font-weight:700;font-size:.95rem}
+.mclose{width:26px;height:26px;border-radius:5px;background:var(--bb);color:var(--t2);font-size:14px;display:flex;align-items:center;justify-content:center;transition:all var(--tr)}
+.mclose:hover{background:var(--b3);color:var(--t1)}
+.mbody{padding:20px}
+.mfoot{padding:13px 20px;border-top:1px solid var(--br);display:flex;justify-content:flex-end;gap:8px}
+
+/* ══════ SETTINGS ══════ */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.scard{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:20px}
+.stitle{font-weight:700;font-size:.88rem;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:8px}
+.stitle .sico{width:28px;height:28px;border-radius:7px;background:var(--ac2);color:var(--ac);display:flex;align-items:center;justify-content:center;font-size:13px}
+.srow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--br)}
+.srow:last-child{border-bottom:none}
+.slbl{font-size:.85rem;font-weight:500}
+.sdesc{font-size:.7rem;color:var(--t2);margin-top:1px}
+.tog{position:relative;display:inline-flex;align-items:center;cursor:pointer}
+.tog input{position:absolute;opacity:0;width:0;height:0}
+.tog-tr{width:40px;height:22px;background:var(--b3);border-radius:11px;position:relative;transition:background var(--tr);border:1px solid var(--brs)}
+.tog input:checked+.tog-tr{background:var(--ac);border-color:var(--ac)}
+.tog-tr::after{content:'';position:absolute;width:16px;height:16px;top:2px;left:2px;background:#fff;border-radius:50%;transition:transform var(--tr)}
+.tog input:checked+.tog-tr::after{transform:translateX(18px)}
+.csw{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.cswatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform var(--tr),box-shadow var(--tr)}
+.cswatch:hover{transform:scale(1.15)}
+.cswatch.on{border-color:var(--t1);box-shadow:0 0 0 3px var(--b1),0 0 0 5px currentColor;transform:scale(1.1)}
+.color-cust{display:flex;align-items:center;gap:8px;margin-top:8px}
+.color-cust input[type=color]{width:34px;height:34px;border:none;padding:0;background:none;cursor:pointer;border-radius:7px;overflow:hidden}
+.logo-zone{border:2px dashed var(--brs);border-radius:var(--r);padding:18px;text-align:center;cursor:pointer;transition:border-color var(--tr)}
+.logo-zone:hover{border-color:var(--ac)}
+
+/* ══════ EXPORT ══════ */
+.egrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:15px}
+.ecard{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:24px;text-align:center;transition:transform var(--tr),box-shadow var(--tr)}
+.ecard:hover{transform:translateY(-2px);box-shadow:var(--cs)}
+.eico{font-size:2.5rem;margin-bottom:12px}
+.etitle{font-weight:700;font-size:.92rem;margin-bottom:6px}
+.edesc{font-size:.78rem;color:var(--t2);margin-bottom:16px;line-height:1.6}
+
+/* ══════ PAGE HEADER ══════ */
+.ph{background:var(--b1);border:1px solid var(--br);border-radius:var(--rl);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:13px;position:relative;overflow:hidden}
+.ph::after{content:'';position:absolute;right:-15px;top:-15px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,var(--ac2),transparent 70%)}
+.phico{width:42px;height:42px;border-radius:11px;background:var(--ac2);color:var(--ac);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.phtitle{font-weight:700;font-size:1rem}
+.phsub{font-size:.76rem;color:var(--t2);margin-top:2px}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ac);position:relative}
+.pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--ac);opacity:0;animation:pls 2s infinite}
+@keyframes pls{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(2)}}
+
+/* ══════ CONFIRM ══════ */
+.cover{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.cover.show{display:flex}
+.cbox{background:var(--b1);border:1px solid var(--brs);border-radius:var(--rl);padding:28px;width:100%;max-width:360px;text-align:center;box-shadow:var(--sh);animation:mi .2s ease}
+.cico{font-size:2rem;margin-bottom:9px}
+.ctitle{font-weight:700;font-size:1rem;margin-bottom:6px}
+.cmsg{font-size:.85rem;color:var(--t2);margin-bottom:20px}
+.cacts{display:flex;gap:8px;justify-content:center}
+
+/* ══════ BOTTOM CONN BAR ══════ */
+#connbar{position:fixed;bottom:0;left:0;right:0;z-index:80;padding:5px 16px;display:flex;align-items:center;justify-content:space-between;font-size:.72rem;background:var(--b1);border-top:1px solid var(--br);transition:all .3s}
+#connbar.on{border-top-color:rgba(34,197,94,.25)}
+#connbar.off{border-top-color:rgba(239,68,68,.4);background:#160a0a}
+.cdot{width:7px;height:7px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.cdot.g{background:#22c55e;box-shadow:0 0 5px #22c55e}
+.cdot.r{background:#ef4444;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.cleft{display:flex;align-items:center}
+.cavs{display:flex;align-items:center;gap:4px}
+.cav{width:18px;height:18px;border-radius:50%;background:var(--ac);color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--b1);margin-left:-4px}
+.cav:first-child{margin-left:0}
+
+/* ══════ TOAST ══════ */
+.tcon{position:fixed;bottom:36px;right:16px;z-index:500;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--b2);border:1px solid var(--brs);border-radius:9px;padding:10px 14px;min-width:220px;max-width:320px;box-shadow:var(--sh);display:flex;align-items:center;gap:8px;animation:tin .28s ease;font-size:.85rem}
+@keyframes tin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tout{from{opacity:1}to{opacity:0;transform:translateX(14px)}}
+.toast.ok{border-left:3px solid #22c55e}.toast.er{border-left:3px solid #ef4444}.toast.in{border-left:3px solid #3b82f6}
+
+/* ══════ SECTION HDR ══════ */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:9px}
+.stit{font-weight:700;font-size:1rem;letter-spacing:-.01em}
+.ssub{font-size:.76rem;color:var(--t2);margin-top:1px}
+.divider{height:1px;background:var(--br);margin:12px 0}
+.hidden{display:none!important}
+
+/* ══════ MOBILE ══════ */
+@media(max-width:768px){
+  .main{padding:14px 14px}.topbar{padding:0 14px}
+  .tb-sub,.user-chip span:not(.uav){display:none}
+  .rgrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
+  .dg{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}
+  .mover{padding:8px}.modal{max-width:100%}
+  .sgrid{grid-template-columns:1fr}
+}
+@media(max-width:460px){.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════
+  SCREEN 1: SETUP
+═══════════════════════════════ -->
+<div id="screen-setup">
+  <div class="setup-wrap">
+    <div class="setup-logo">
+      <div class="setup-logo-icon" id="s-logo-ico">📡</div>
+      <h1>FTTH Issue Tracker</h1>
+      <p>ລະບົບຕິດຕາມບັນຫາ Fiber Optic • Multi-user Real-time</p>
+    </div>
+
+    <div class="tab-switch">
+      <button class="tab-sw-btn on" id="tab-admin-btn" onclick="switchSetupTab('admin')">
+        👑 Admin Setup (ຄັ້ງທຳອິດ)
+      </button>
+      <button class="tab-sw-btn" id="tab-team-btn" onclick="switchSetupTab('team')">
+        👥 Team Member (ໃສ່ Code)
+      </button>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="tab-admin" class="setup-card">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            ໄປທີ່ <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>
+            → <strong>Add Project</strong> → ຕັ້ງຊື່ → Create
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Build → Realtime Database → Create Database</strong>
+            → ເລືອກ Region → <strong>Start in test mode</strong> → Enable
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            ⚙️ <strong>Project Settings → Your apps → </strong><code>&lt;/&gt;</code>
+            → Register (<code>ftth-app</code>) → Copy <code>firebaseConfig</code>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">Paste ໃສ່ຂ້າງລຸ່ມ → ກົດ <strong>ເຊື່ອມຕໍ່</strong></div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Firebase Config JSON</label>
+        <textarea id="fb-cfg" rows="7" style="font-family:var(--fm);font-size:.75rem;resize:vertical" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "databaseURL": "https://your-app-default-rtdb.firebaseio.com",
+  "projectId": "your-app",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "1234567890",
+  "appId": "1:1234567890:web:abc123"
+}'></textarea>
+        <div class="err-msg" id="admin-err"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="flex:1" onclick="adminConnect()">🔥 ເຊື່ອມຕໍ່ Firebase</button>
+        <button class="btn btn-outline" onclick="useDemoMode()">💻 Demo Mode</button>
+      </div>
+
+      <div class="info-box">
+        💡 ຫຼັງ Setup ສຳເລັດ → ໄປ ⚙️ Settings → <strong>ສ້າງ Team Code</strong> → ສົ່ງໃຫ້ທີມ<br/>
+        ທີມໃສ່ Code ດຽວ → ເຊື່ອມ Firebase ດຽວກັນໄດ້ທັນທີ ✅
+      </div>
+    </div>
+
+    <!-- TEAM TAB -->
+    <div id="tab-team" class="setup-card hidden">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.5rem;margin-bottom:10px">👥</div>
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:5px">ເຂົ້າຮ່ວມທີມ</div>
+        <div style="font-size:.83rem;color:var(--t2)">ຂໍ <strong>Team Code</strong> ຈາກ Admin ຂອງທ່ານ<br/>ຈາກນັ້ນ Paste ໃສ່ຂ້າງລຸ່ມ</div>
+      </div>
+
+      <div class="fg">
+        <label>Team Code (ຂໍຈາກ Admin)</label>
+        <textarea id="team-code-input" rows="4" style="font-family:var(--fm);font-size:.72rem;resize:vertical" placeholder="eyJmYiI6eyJhcGlLZXkiOi..."></textarea>
+        <div class="err-msg" id="team-err"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="joinTeam()">🚀 ເຂົ້າຮ່ວມທີມ</button>
+
+      <div class="info-box" style="margin-top:14px">
+        📱 ຫຼັງ Join ສຳເລັດ → ກົດ <strong>"Add to Home Screen"</strong> ໃນ Browser<br/>
+        ຈະໄດ້ Icon ຄືກັບ App ຈິງໃນ Mobile ຂອງທ່ານ ✅
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+  SCREEN 2: LOGIN
+═══════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-bg"></div>
+  <div class="login-glow"></div>
+  <div class="login-card">
+    <div class="login-head">
+      <div class="login-logo-icon" id="ll-ico">📡</div>
+      <h1 id="ll-title">FTTH Tracker</h1>
+      <p>ລະບົບຕິດຕາມບັນຫາ FTTH</p>
+      <div class="mode-pill" id="mode-pill">🔥 Firebase Multi-user</div>
+    </div>
+    <div class="fg"><label>ຊື່ຜູ້ໃຊ້</label><input type="text" id="lu" placeholder="admin" autocomplete="username"/></div>
+    <div class="fg"><label>ລະຫັດຜ່ານ</label><input type="password" id="lp" placeholder="••••••••" autocomplete="current-password"/></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">🔐 ເຂົ້າສູ່ລະບົບ</button>
+    <div id="login-err">❌ ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ</div>
+    <div class="login-footer"><a onclick="resetSetup()">⚙️ ປ່ຽນ Firebase / Reset</a></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+  SCREEN 3: APP
+═══════════════════════════════ -->
+<div id="app">
+  <header class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo" id="tb-logo">📡</div>
+      <div>
+        <div class="tb-name" id="tb-name">FTTH Tracker</div>
+        <div class="tb-sub">FTTH Issue Tracking System</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="sync-pill ok" id="sync-pill">✅ Synced</div>
+      <button class="btn btn-sm btn-outline btn-icon" onclick="toggleTheme()" title="Toggle theme"><span id="theme-ico">☀️</span></button>
+      <div class="user-chip">
+        <div class="uav" id="uav">A</div>
+        <span id="uname">admin</span>
+      </div>
+      <button class="btn btn-sm btn-ghost btn-icon" onclick="doLogout()" title="Logout">🚪</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <nav class="nav">
+      <button class="nav-btn on" onclick="goTab('dash')">📊 ໜ້າຫຼັກ</button>
+      <button class="nav-btn" onclick="goTab('rec')">📋 ບັນທຶກ <span class="nbadge" id="tab-cnt">0</span></button>
+      <button class="nav-btn" onclick="goTab('exp')">💾 ສົ່ງອອກ</button>
+      <button class="nav-btn" onclick="goTab('set')">⚙️ ຕັ້ງຄ່າ</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <div class="panel on" id="panel-dash">
+      <div class="ph">
+        <div class="phico">📊</div>
+        <div>
+          <div class="phtitle">Dashboard Overview <span class="pulse"></span></div>
+          <div class="phsub" id="dash-sub">Real-time sync • Firebase</div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="sc"><div class="sc-lbl">ທັງໝົດ</div><div class="sc-val" id="s-tot">0</div><div class="sc-sub">Total Cases</div><div class="sc-ico">📋</div></div>
+        <div class="sc gr"><div class="sc-lbl">ສຳເລັດ</div><div class="sc-val" id="s-done">0</div><div class="sc-sub" id="s-pct">0%</div><div class="sc-ico">✅</div></div>
+        <div class="sc yl"><div class="sc-lbl">ດຳເນີນການ</div><div class="sc-val" id="s-prog">0</div><div class="sc-sub">In Progress</div><div class="sc-ico">⚙️</div></div>
+        <div class="sc bl"><div class="sc-lbl">ຮັບເລື້ອງ</div><div class="sc-val" id="s-recv">0</div><div class="sc-sub">Received</div><div class="sc-ico">📥</div></div>
+      </div>
+      <div class="dg">
+        <div class="cc"><div class="cc-title"><div class="dot"></div>ສາເຫດບັນຫາ</div><div class="ch"><canvas id="ch-r"></canvas></div></div>
+        <div class="cc"><div class="cc-title"><div class="dot"></div>ສະຖານະ</div><div class="ch"><canvas id="ch-s"></canvas></div></div>
+      </div>
+      <div class="dg" style="margin-top:16px">
+        <div class="cc"><div class="cc-title"><div class="dot"></div>ກິດຈະກຳລ່າສຸດ</div><div class="act-list" id="act-list"><div style="padding:16px;text-align:center;color:var(--t3)">ກຳລັງໂຫຼດ...</div></div></div>
+        <div class="cc"><div class="cc-title"><div class="dot"></div>ຜູ້ຮັບຜິດຊອບ</div><div id="rcv-stats" style="padding-top:3px"></div></div>
+      </div>
+    </div>
+
+    <!-- RECORDS -->
+    <div class="panel" id="panel-rec">
+      <div class="shdr">
+        <div><div class="stit">ບັນທຶກທັງໝົດ</div><div class="ssub">Real-time sync • ຂໍ້ມູນດຽວກັນທຸກ device</div></div>
+        <div style="display:flex;gap:7px;align-items:center">
+          <div class="vtog">
+            <button class="vbtn on" id="vb-card" onclick="setView('card')" title="Card">⊞</button>
+            <button class="vbtn" id="vb-table" onclick="setView('table')" title="Table">☰</button>
+          </div>
+          <button class="btn btn-primary" onclick="openAdd()">➕ ເພີ່ມ</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="sw"><span class="sw-ico">🔍</span><input type="text" id="srch" placeholder="ຄົ້ນຫາ ຊື່, ບ້ານ, ໂທ..." oninput="doFilter()"/></div>
+        <select class="fsel" id="fvil" onchange="doFilter()"><option value="">📍 ທຸກບ້ານ</option></select>
+        <select class="fsel" id="fsort" onchange="doFilter()">
+          <option value="nd">📅 ໃໝ່ → ເກົ່າ</option>
+          <option value="od">📅 ເກົ່າ → ໃໝ່</option>
+          <option value="az">🔤 ຊື່ A→Z</option>
+        </select>
+      </div>
+      <div class="chips">
+        <button class="chip on" onclick="setChip(this,'')">ທັງໝົດ</button>
+        <button class="chip" onclick="setChip(this,'received')">📥 ຮັບເລື້ອງ</button>
+        <button class="chip" onclick="setChip(this,'progress')">⚙️ ດຳເນີນການ</button>
+        <button class="chip" onclick="setChip(this,'completed')">✅ ສຳເລັດ</button>
+      </div>
+      <div class="rinfo">ສະແດງ <span id="rcnt">0</span> ລາຍການ</div>
+      <div id="v-card"><div class="rgrid" id="rgrid"></div></div>
+      <div id="v-table" class="hidden">
+        <div class="twrap">
+          <table><thead><tr>
+            <th>#</th><th>User ID</th><th>ຊື່</th><th>ໂທ</th><th>ບ້ານ</th>
+            <th>ສາເຫດ</th><th>ສະຖານະ</th><th>ຜູ້ຮັບ</th><th>ຊ່າງ</th><th>ວັນທີ</th><th>ຈັດການ</th>
+          </tr></thead><tbody id="rtbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="panel" id="panel-exp">
+      <div class="ph"><div class="phico">💾</div><div><div class="phtitle">ສົ່ງອອກຂໍ້ມູນ</div><div class="phsub">Export All Records</div></div></div>
+      <div class="egrid">
+        <div class="ecard"><div class="eico">📄</div><div class="etitle">Export PDF</div><div class="edesc">ດາວໂຫຼດ PDF<br/>ເໝາະສຳລັບປິ້ນ</div><button class="btn btn-danger" onclick="expPDF()" style="width:100%">📥 PDF</button></div>
+        <div class="ecard"><div class="eico">📊</div><div class="etitle">Export Excel</div><div class="edesc">ດາວໂຫຼດ .xlsx<br/>ສຳລັບວິເຄາະ</div><button class="btn btn-success" onclick="expXLS()" style="width:100%">📥 Excel</button></div>
+        <div class="ecard"><div class="eico">🗂️</div><div class="etitle">Backup JSON</div><div class="edesc">ສຳຮອງຂໍ້ມູນ<br/>ໃຊ້ Restore ໄດ້</div><button class="btn btn-outline" onclick="expJSON()" style="width:100%">💾 JSON</button></div>
+        <div class="ecard"><div class="eico">📂</div><div class="etitle">Import JSON</div><div class="edesc">ກູ້ຄືນ backup<br/>⚠️ ທັບຂໍ້ມູນເດີມ</div><div style="position:relative"><button class="btn btn-outline" style="width:100%">📂 Import</button><input type="file" accept=".json" onchange="impJSON(event)" style="position:absolute;inset:0;opacity:0;cursor:pointer"/></div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-set">
+      <div class="ph"><div class="phico">⚙️</div><div><div class="phtitle">ຕັ້ງຄ່າ</div><div class="phsub">ປັບແຕ່ງ App ແລະ Firebase</div></div></div>
+      <div class="sgrid">
+
+        <!-- APPEARANCE -->
+        <div class="scard">
+          <div class="stitle"><div class="sico">🎨</div>ການສະແດງຜົນ</div>
+          <div class="srow">
+            <div><div class="slbl">Dark Mode</div><div class="sdesc">ໂໝດມືດ / ສ່ວາງ</div></div>
+            <label class="tog"><input type="checkbox" id="dk-tog" onchange="toggleTheme()"/><div class="tog-tr"></div></label>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin-bottom:8px">ສີຫຼັກ</div>
+          <div class="csw" id="clr-sw"></div>
+          <div class="color-cust">
+            <input type="color" id="clr-cust" value="#f97316" oninput="setAc(this.value)"/>
+            <span style="font-size:.78rem;color:var(--t2)">ສີກຳນົດເອງ</span>
+          </div>
+        </div>
+
+        <!-- LOGO & NAME -->
+        <div class="scard">
+          <div class="stitle"><div class="sico">🖼️</div>ໂລໂກ້ ແລະ ຊື່</div>
+          <div class="logo-zone" onclick="document.getElementById('logo-f').click()">
+            <input type="file" id="logo-f" accept="image/*" style="display:none" onchange="handleLogo(event)"/>
+            <div id="logo-prv"><div style="font-size:1.8rem;margin-bottom:6px;color:var(--t3)">🖼️</div><div style="font-size:.8rem;color:var(--t2)">ກົດ Upload ໂລໂກ້</div><div style="font-size:.7rem;color:var(--t3);margin-top:3px">PNG, JPG • Max 2MB</div></div>
+          </div>
+          <div class="fg" style="margin-top:12px;margin-bottom:0">
+            <label>ຊື່ App</label>
+            <input type="text" id="appname-i" value="FTTH Tracker" oninput="setAppName(this.value)"/>
+          </div>
+        </div>
+
+        <!-- LOGIN CREDENTIALS -->
+        <div class="scard">
+          <div class="stitle"><div class="sico">🔐</div>ຂໍ້ມູນ Login</div>
+          <div class="fg"><label>Username ໃໝ່</label><input type="text" id="nu"/></div>
+          <div class="fg"><label>Password ໃໝ່</label><input type="password" id="np"/></div>
+          <div class="fg"><label>ຢືນຢັນ Password</label><input type="password" id="cp"/></div>
+          <button class="btn btn-primary" onclick="updateCreds()">💾 ບັນທຶກ Login</button>
+        </div>
+
+        <!-- TEAM CODE -->
+        <div class="scard">
+          <div class="stitle"><div class="sico">👥</div>Team Code — ແຊໃຫ້ທີມ</div>
+          <div style="font-size:.82rem;color:var(--t2);margin-bottom:12px;line-height:1.7">
+            ກົດ <strong>"ສ້າງ Team Code"</strong> → Copy Code → ສົ່ງໃຫ້ທຸກຄົນໃນທີມ<br/>
+            ທີມ Paste Code → ເຊື່ອມ Firebase ດຽວກັນທັນທີ
+          </div>
+          <button class="btn btn-primary" onclick="genTeamCode()" style="width:100%;margin-bottom:10px">🔑 ສ້າງ Team Code</button>
+          <div id="tc-box" class="hidden">
+            <div style="font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Team Code (ກົດ Copy):</div>
+            <div class="team-code-box" id="tc-text" onclick="copyTC()"></div>
+            <div class="copy-btn-row">
+              <button class="btn btn-success btn-sm" onclick="copyTC()" style="flex:1">📋 Copy Code</button>
+              <button class="btn btn-outline btn-sm" onclick="shareTC()">📤 Share</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FIREBASE & DATA -->
+        <div class="scard">
+          <div class="stitle"><div class="sico">🔥</div>Firebase & ຂໍ້ມູນ</div>
+          <div class="srow">
+            <div><div class="slbl">ສະຖານະ</div><div class="sdesc" id="fb-st">ກຳລັງກວດ...</div></div>
+            <div class="cdot g" id="fb-dot"></div>
+          </div>
+          <div class="srow">
+            <div><div class="slbl">ຂໍ້ມູນ</div><div class="sdesc" id="dc-desc">0 ລາຍການ</div></div>
+            <button class="btn btn-sm btn-outline" onclick="goTab('rec')">ເບິ່ງ</button>
+          </div>
+          <div class="srow">
+            <div><div class="slbl">ປ່ຽນ Firebase</div><div class="sdesc">Reset & ຕັ້ງຄ່າໃໝ່</div></div>
+            <button class="btn btn-sm btn-outline" onclick="resetSetup()">Reset</button>
+          </div>
+          <div class="srow">
+            <div><div class="slbl">ລ້າງຂໍ້ມູນ</div><div class="sdesc" style="color:#ef4444">⚠️ ລຶບຈາກ Firebase</div></div>
+            <button class="btn btn-sm btn-danger" onclick="clearAll()">ລ້າງ</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="mover" id="rec-modal">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle" id="m-title">➕ ເພີ່ມໃໝ່</div>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="form-grid">
+        <div class="fg"><label>🆔 User ID *</label><input type="text" id="fi-uid" placeholder="USER001"/></div>
+        <div class="fg"><label>👤 ຊື່ລູກຄ້າ *</label><input type="text" id="fi-name" placeholder="ຊື່ ນາມສະກຸນ"/></div>
+        <div class="fg"><label>📞 ໂທລະສັບ</label><input type="tel" id="fi-phone" placeholder="020XXXXXXXX"/></div>
+        <div class="fg"><label>📍 ບ້ານ</label><input type="text" id="fi-vill" placeholder="ຊື່ບ້ານ"/></div>
+        <div class="fg"><label>📅 ວັນທີ</label><input type="date" id="fi-date"/></div>
+        <div class="fg"><label>⚠️ ສາເຫດ *</label>
+          <select id="fi-rsn"><option value="">-- ເລືອກ --</option>
+            <option value="loss">Loss signal (ສັນຍານຫາຍ/ແດງ)</option>
+            <option value="unstable">Unstable signal (ສັນຍານບໍ່ຄວບຄຸມ)</option>
+            <option value="late">Late report (ແຈ້ງຊ້າ)</option>
+            <option value="password">Password reset (ປ່ຽນລະຫັດ)</option>
+            <option value="power">No modem power (ໄຟບໍ່ເຂົ້າໂມເດັມ)</option>
+            <option value="expired">Contract expired (ໝົດກຳນົດ)</option>
+          </select>
+        </div>
+        <div class="fg"><label>📊 ສະຖານະ</label>
+          <select id="fi-st">
+            <option value="received">ຮັບເລື້ອງ</option>
+            <option value="progress">ກຳລັງດຳເນີນການ</option>
+            <option value="completed">ແກ້ໄຂສຳເລັດ</option>
+          </select>
+        </div>
+        <div class="fg"><label>👷 ຜູ້ຮັບ</label>
+          <select id="fi-rcv"><option value="">-- ເລືອກ --</option>
+            <option>ຄອນສະຫວັນ</option><option>ຊີກັນດາ</option>
+            <option>ພູເງິນ</option><option>ພອນຊະນະ</option><option>ສຸກໄຂ່ແກ້ວ</option>
+          </select>
+        </div>
+        <div class="fg form-full"><label>🔧 ຊ່າງ</label><input type="text" id="fi-tech" placeholder="ຊ່າງທີ່ດຳເນີນການ"/></div>
+        <div class="fg form-full"><label>📝 ໝາຍເຫດ</label><textarea id="fi-note" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-outline" onclick="closeModal()">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveRec()">💾 ບັນທຶກ</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="cover" id="conf-overlay">
+  <div class="cbox">
+    <div class="cico">⚠️</div>
+    <div class="ctitle" id="conf-title">ຢືນຢັນ</div>
+    <div class="cmsg" id="conf-msg"></div>
+    <div class="cacts">
+      <button class="btn btn-outline" onclick="closeConf()">ຍົກເລີກ</button>
+      <button class="btn btn-danger" id="conf-ok">ຢືນຢັນ</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONN BAR -->
+<div id="connbar" class="on">
+  <div class="cleft">
+    <div class="cdot g" id="cdot"></div>
+    <span id="ctxt">ກຳລັງ Connect...</span>
+  </div>
+  <div class="cavs" id="online-avs"></div>
+</div>
+
+<!-- TOAST -->
+<div class="tcon" id="tcon"></div>
+
+<!-- ═══════════════════════════════
+  JAVASCRIPT
+═══════════════════════════════ -->
+<script>
+/* ═══ CONSTANTS ═══ */
+const SK='ftth_settings_v5', AK='ftth_auth_v5', FK='ftth_fb_cfg_v5', DK='ftth_demo_v5';
+const REASONS={loss:'Loss Signal (ສັນຍານຫາຍ)',unstable:'Unstable (ສັນຍານບໍ່ຄວບ)',late:'Late Report (ແຈ້ງຊ້າ)',password:'Password Reset',power:'No Power (ໄຟບໍ່ເຂົ້າ)',expired:'Contract Expired'};
+const ACCENTS=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#06b6d4','#f59e0b','#ec4899','#10b981','#6366f1'];
+const RECEIVERS=['ຄອນສະຫວັນ','ຊີກັນດາ','ພູເງິນ','ພອນຊະນະ','ສຸກໄຂ່ແກ້ວ'];
+
+/* ═══ STATE ═══ */
+let records=[], db=null, dbRef=null, presRef=null;
+let demoMode=false, editId=null, statusFilter='', curView='card';
+let cRsn=null, cSt=null, curUser='admin';
+let cfg={theme:'dark',accent:'#f97316',appName:'FTTH Tracker',logo:null};
+let auth={username:'admin',password:'admin123'};
+
+/* ═══ INIT ═══ */
+window.addEventListener('load',()=>{
+  loadCfg(); loadAuth(); applyCfg(); renderSwatches();
+  document.getElementById('dk-tog').checked = cfg.theme==='dark';
+  const saved=localStorage.getItem(FK);
+  if(saved){ try{initFB(JSON.parse(saved));}catch{showSetup();} }
+  else showSetup();
+  // keyboard
+  ['lp','lu'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();}));
+  document.getElementById('rec-modal').addEventListener('click',e=>{if(e.target.id==='rec-modal')closeModal();});
+  document.getElementById('conf-overlay').addEventListener('click',e=>{if(e.target.id==='conf-overlay')closeConf();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeConf();}if(e.ctrlKey&&e.key==='n'&&document.getElementById('app').classList.contains('show')){e.preventDefault();openAdd();}});
+});
+
+/* ═══ SETUP ═══ */
+function showSetup(){
+  document.getElementById('screen-setup').style.display='flex';
+  document.getElementById('screen-login').classList.remove('show');
+  document.getElementById('app').classList.remove('show');
+}
+function switchSetupTab(t){
+  document.getElementById('tab-admin-btn').classList.toggle('on',t==='admin');
+  document.getElementById('tab-team-btn').classList.toggle('on',t==='team');
+  document.getElementById('tab-admin').classList.toggle('hidden',t!=='admin');
+  document.getElementById('tab-team').classList.toggle('hidden',t==='admin');
+}
+function resetSetup(){ localStorage.removeItem(FK); if(presRef){presRef.remove();presRef=null;} if(db)db.ref('ftth_presence').off(); db=null; dbRef=null; showSetup(); }
+
+function adminConnect(){
+  const raw=document.getElementById('fb-cfg').value.trim();
+  const el=document.getElementById('admin-err'); el.style.display='none';
+  let c;
+  try{ c=JSON.parse(raw); if(!c.databaseURL||!c.apiKey) throw new Error('Missing fields'); }
+  catch(e){ el.style.display='block'; el.textContent='❌ JSON ບໍ່ຖືກ — ຕ້ອງມີ apiKey ແລະ databaseURL'; return; }
+  localStorage.setItem(FK,JSON.stringify(c));
+  initFB(c);
+}
+
+function joinTeam(){
+  const code=document.getElementById('team-code-input').value.trim();
+  const el=document.getElementById('team-err'); el.style.display='none';
+  try{
+    const data=JSON.parse(atob(code));
+    if(!data.fb||!data.fb.databaseURL) throw new Error('Invalid');
+    localStorage.setItem(FK,JSON.stringify(data.fb));
+    if(data.auth) { auth=data.auth; saveAuth(); }
+    if(data.appName){ cfg.appName=data.appName; saveCfg(); }
+    initFB(data.fb);
+  }catch(e){ el.style.display='block'; el.textContent='❌ Code ບໍ່ຖືກ — ຂໍ Code ໃໝ່ຈາກ Admin'; }
+}
+
+function useDemoMode(){
+  demoMode=true; db=null; dbRef=null;
+  document.getElementById('mode-pill').innerHTML='💻 Demo Mode (LocalStorage)';
+  document.getElementById('mode-pill').style.cssText='background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#60a5fa;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600;border:1px solid;margin-top:7px';
+  document.getElementById('ctxt').textContent='Demo Mode — ຂໍ້ມູນບໍ່ Sync';
+  try{records=JSON.parse(localStorage.getItem(DK)||'[]');}catch{records=[];}
+  if(!records.length) seedDemo();
+  document.getElementById('screen-setup').style.display='none';
+  document.getElementById('screen-login').classList.add('show');
+}
+
+/* ═══ FIREBASE ═══ */
+function initFB(c){
+  try{
+    if(firebase.apps.length){firebase.app().delete().then(()=>startFB(c)).catch(()=>startFB(c));}
+    else startFB(c);
+  }catch{startFB(c);}
+}
+function startFB(c){
+  try{
+    const app=firebase.apps.length?firebase.app():firebase.initializeApp(c);
+    db=firebase.database(app);
+    dbRef=db.ref('ftth_records');
+    // Connection
+    db.ref('.info/connected').on('value',snap=>{
+      const on=snap.val();
+      const bar=document.getElementById('connbar'),dot=document.getElementById('cdot'),txt=document.getElementById('ctxt');
+      setSyncPill(on?'ok':'err');
+      if(on){bar.className='on';dot.className='cdot g';txt.textContent='Firebase Connected ✅';document.getElementById('fb-st').textContent='🟢 Online';}
+      else{bar.className='off';dot.className='cdot r';txt.textContent='ຂາດ Connection — Reconnecting...';document.getElementById('fb-st').textContent='🔴 Offline';}
+    });
+    // Records listener
+    dbRef.on('value',snap=>{
+      const d=snap.val();
+      records=d?Object.values(d):[];
+      records.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      if(document.getElementById('app').classList.contains('show')){
+        doFilter(); updateDash(); updateTabCnt(); fillVil();
+        document.getElementById('dc-desc').textContent=records.length+' ລາຍການ';
+      }
+      setSyncPill('ok');
+    },err=>{setSyncPill('err');toast('Firebase: '+err.message,'er');});
+    demoMode=false;
+    document.getElementById('screen-setup').style.display='none';
+    document.getElementById('screen-login').classList.add('show');
+  }catch(e){
+    document.getElementById('admin-err').style.display='block';
+    document.getElementById('admin-err').textContent='❌ Firebase Error: '+e.message;
+    document.getElementById('screen-setup').style.display='flex';
+  }
+}
+
+async function fbSet(r){
+  if(demoMode){const i=records.findIndex(x=>x.id===r.id);if(i>=0)records[i]=r;else records.unshift(r);saveDemo();doFilter();updateDash();updateTabCnt();return;}
+  setSyncPill('busy');
+  await db.ref('ftth_records/'+r.id).set(r);
+}
+async function fbDel(id){
+  if(demoMode){records=records.filter(x=>x.id!==id);saveDemo();doFilter();updateDash();updateTabCnt();return;}
+  setSyncPill('busy');
+  await db.ref('ftth_records/'+id).remove();
+}
+function saveDemo(){localStorage.setItem(DK,JSON.stringify(records));}
+
+function setSyncPill(s){
+  const el=document.getElementById('sync-pill'); if(!el)return;
+  const m={ok:{c:'ok',t:'✅ Synced'},busy:{c:'busy',t:'<span class="sp">⏳</span> Syncing'},err:{c:'err',t:'❌ Offline'}};
+  const d=m[s]||m.ok; el.className='sync-pill '+d.c; el.innerHTML=d.t;
+}
+
+/* ═══ TEAM CODE ═══ */
+function genTeamCode(){
+  const saved=localStorage.getItem(FK);
+  if(!saved&&!demoMode){toast('ຕ້ອງ Connect Firebase ກ່ອນ','er');return;}
+  const data={fb:saved?JSON.parse(saved):null,auth:{username:auth.username,password:auth.password},appName:cfg.appName};
+  const code=btoa(JSON.stringify(data));
+  document.getElementById('tc-text').textContent=code;
+  document.getElementById('tc-box').classList.remove('hidden');
+  toast('ສ້າງ Team Code ສຳເລັດ ✅ — Copy ແລ້ວສົ່ງໃຫ້ທີມ','ok');
+}
+function copyTC(){
+  const code=document.getElementById('tc-text').textContent;
+  navigator.clipboard.writeText(code).then(()=>toast('Copy Code ສຳເລັດ ✅','ok')).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copy ສຳເລັດ ✅','ok');
+  });
+}
+function shareTC(){
+  const code=document.getElementById('tc-text').textContent;
+  if(navigator.share){
+    navigator.share({title:'FTTH Team Code',text:'Team Code ສຳລັບ FTTH Tracker:\n\n'+code}).catch(()=>{});
+  } else copyTC();
+}
+
+/* ═══ PRESENCE ═══ */
+function setupPresence(u){
+  if(!db||demoMode)return;
+  const uid=u+'_'+Math.random().toString(36).slice(2,6);
+  presRef=db.ref('ftth_presence/'+uid);
+  presRef.set({name:u,ts:Date.now()});
+  presRef.onDisconnect().remove();
+  db.ref('ftth_presence').on('value',snap=>{
+    const d=snap.val()||{};
+    const users=Object.values(d);
+    const el=document.getElementById('online-avs');
+    el.innerHTML=(users.length>1?`<span style="color:var(--t2);font-size:.7rem;margin-right:3px">${users.length} online:</span>`:'')+
+      users.slice(0,6).map(x=>`<div class="cav" title="${esc(x.name)}">${x.name[0].toUpperCase()}</div>`).join('');
+  });
+}
+
+/* ═══ SETTINGS STORAGE ═══ */
+function loadCfg(){try{const s=JSON.parse(localStorage.getItem(SK));if(s)cfg={...cfg,...s};}catch{}}
+function saveCfg(){localStorage.setItem(SK,JSON.stringify(cfg));}
+function loadAuth(){try{const a=JSON.parse(localStorage.getItem(AK));if(a)auth=a;}catch{}}
+function saveAuth(){localStorage.setItem(AK,JSON.stringify(auth));}
+
+function applyCfg(){
+  const h=cfg.accent,r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  document.documentElement.style.setProperty('--ac',h);
+  document.documentElement.style.setProperty('--ac2',`rgba(${r},${g},${b},.15)`);
+  document.documentElement.style.setProperty('--ac3',`#${Math.max(0,r-18).toString(16).padStart(2,'0')}${Math.max(0,g-18).toString(16).padStart(2,'0')}${Math.max(0,b-18).toString(16).padStart(2,'0')}`);
+  document.documentElement.setAttribute('data-theme',cfg.theme);
+  if(cfg.appName){
+    ['tb-name','ll-title'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=cfg.appName;});
+    const ai=document.getElementById('appname-i');if(ai)ai.value=cfg.appName;
+    document.title=cfg.appName;
+  }
+  if(cfg.logo) showLogo(cfg.logo);
+  updateThemeIco();
+}
+function updateThemeIco(){document.getElementById('theme-ico').textContent=cfg.theme==='dark'?'☀️':'🌙';}
+function toggleTheme(){cfg.theme=cfg.theme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',cfg.theme);document.getElementById('dk-tog').checked=cfg.theme==='dark';updateThemeIco();saveCfg();setTimeout(()=>{initCharts();updateDash();},120);}
+function setAc(c){cfg.accent=c;applyCfg();saveCfg();updateSwatchActive();setTimeout(()=>{initCharts();updateDash();},120);}
+function renderSwatches(){document.getElementById('clr-sw').innerHTML=ACCENTS.map(c=>`<div class="cswatch${c===cfg.accent?' on':''}" style="background:${c}" title="${c}" onclick="setAc('${c}')"></div>`).join('');}
+function updateSwatchActive(){document.querySelectorAll('.cswatch').forEach(s=>s.classList.toggle('on',s.getAttribute('title')===cfg.accent));document.getElementById('clr-cust').value=cfg.accent;}
+function setAppName(v){cfg.appName=v||'FTTH Tracker';applyCfg();saveCfg();}
+function handleLogo(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>2*1024*1024){toast('ໃຫຍ່ເກີນ 2MB','er');return;}
+  const r=new FileReader();r.onload=ev=>{cfg.logo=ev.target.result;saveCfg();showLogo(ev.target.result);toast('Upload Logo ✅','ok');};r.readAsDataURL(f);
+}
+function showLogo(src){
+  const mk=id=>`<img src="${src}" style="width:100%;height:100%;object-fit:cover"/>`;
+  const tl=document.getElementById('tb-logo');if(tl)tl.innerHTML=mk('tl');
+  const ll=document.getElementById('ll-ico');if(ll)ll.innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:11px"/>`;
+  document.getElementById('logo-prv').innerHTML=`<img src="${src}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;margin:0 auto 7px"/><div style="font-size:.78rem;color:var(--t2)">ກົດເພື່ອປ່ຽນ</div>`;
+}
+function updateCreds(){
+  const u=document.getElementById('nu').value.trim(),p=document.getElementById('np').value,c=document.getElementById('cp').value;
+  if(!u||!p){toast('ປ້ອນຂໍ້ມູນໃຫ້ຄົບ','er');return;}
+  if(p!==c){toast('Password ບໍ່ຕົງກັນ','er');return;}
+  auth={username:u,password:p};saveAuth();
+  document.getElementById('nu').value='';document.getElementById('np').value='';document.getElementById('cp').value='';
+  toast('ອັບເດດ Login ✅ — ກະລຸນາ Login ໃໝ່','ok');
+}
+
+/* ═══ AUTH ═══ */
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  const err=document.getElementById('login-err');
+  if(u===auth.username&&p===auth.password){
+    err.style.display='none';curUser=u;
+    sessionStorage.setItem('ftth_u',u);sessionStorage.setItem('ftth_in','1');
+    document.getElementById('uav').textContent=u[0].toUpperCase();
+    document.getElementById('uname').textContent=u;
+    showApp();setupPresence(u);
+  }else{err.style.display='block';document.getElementById('lp').value='';}
+}
+function doLogout(){
+  showConf('Logout','ຕ້ອງການອອກ?',()=>{
+    if(presRef){presRef.remove();presRef=null;}
+    if(db&&!demoMode)db.ref('ftth_presence').off();
+    sessionStorage.removeItem('ftth_in');sessionStorage.removeItem('ftth_u');
+    document.getElementById('app').classList.remove('show');
+    document.getElementById('screen-login').classList.add('show');
+    document.getElementById('lu').value='';document.getElementById('lp').value='';
+  });
+}
+function showApp(){
+  document.getElementById('screen-login').classList.remove('show');
+  document.getElementById('app').classList.add('show');
+  initCharts();doFilter();updateDash();updateTabCnt();fillVil();
+  document.getElementById('dc-desc').textContent=records.length+' ລາຍການ';
+  if(cfg.appName)document.title=cfg.appName;
+  // restore session
+  const su=sessionStorage.getItem('ftth_u');
+  if(su){curUser=su;document.getElementById('uav').textContent=su[0].toUpperCase();document.getElementById('uname').textContent=su;}
+}
+
+/* ═══ TABS ═══ */
+function goTab(t){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('panel-'+t).classList.add('on');
+  const idx={dash:0,rec:1,exp:2,set:3}[t]||0;
+  document.querySelectorAll('.nav-btn')[idx].classList.add('on');
+  if(t==='dash')updateDash();
+  if(t==='rec')doFilter();
+  if(t==='set'){document.getElementById('dc-desc').textContent=records.length+' ລາຍການ';}
+}
+
+/* ═══ CRUD ═══ */
+function openAdd(){
+  editId=null;document.getElementById('m-title').textContent='➕ ເພີ່ມລາຍການໃໝ່';
+  clearForm();document.getElementById('fi-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('rec-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('fi-uid').focus(),100);
+}
+function openEdit(id){
+  const r=records.find(x=>x.id===id);if(!r)return;
+  editId=id;document.getElementById('m-title').textContent='✏️ ແກ້ໄຂລາຍການ';
+  document.getElementById('fi-uid').value=r.userId||'';document.getElementById('fi-name').value=r.name||'';
+  document.getElementById('fi-phone').value=r.phone||'';document.getElementById('fi-vill').value=r.village||'';
+  document.getElementById('fi-date').value=r.date||'';document.getElementById('fi-rsn').value=r.reason||'';
+  document.getElementById('fi-st').value=r.status||'received';document.getElementById('fi-rcv').value=r.receiver||'';
+  document.getElementById('fi-tech').value=r.tech||'';document.getElementById('fi-note').value=r.notes||'';
+  document.getElementById('rec-modal').classList.add('show');
+}
+function closeModal(){document.getElementById('rec-modal').classList.remove('show');editId=null;clearForm();}
+function clearForm(){['fi-uid','fi-name','fi-phone','fi-vill','fi-date','fi-tech','fi-note'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('fi-rsn').value='';document.getElementById('fi-st').value='received';document.getElementById('fi-rcv').value='';}
+
+async function saveRec(){
+  const uid=document.getElementById('fi-uid').value.trim(),name=document.getElementById('fi-name').value.trim();
+  const phone=document.getElementById('fi-phone').value.trim(),village=document.getElementById('fi-vill').value.trim();
+  const date=document.getElementById('fi-date').value,reason=document.getElementById('fi-rsn').value;
+  const status=document.getElementById('fi-st').value,receiver=document.getElementById('fi-rcv').value;
+  const tech=document.getElementById('fi-tech').value.trim(),notes=document.getElementById('fi-note').value.trim();
+  if(!uid||!name||!reason){toast('ກະລຸນາປ້ອນ User ID, ຊື່ ແລະ ສາເຫດ *','er');return;}
+  const btn=document.getElementById('save-btn');btn.disabled=true;btn.innerHTML='⏳ ກຳລັງບັນທຶກ...';
+  try{
+    const now=new Date().toISOString();
+    if(editId){
+      const old=records.find(r=>r.id===editId);
+      await fbSet({...old,userId:uid,name,phone,village,date,reason,status,receiver,tech,notes,updatedAt:now,updatedBy:curUser});
+      toast('ອັບເດດສຳເລັດ ✅','ok');
+    }else{
+      await fbSet({id:'REC'+Date.now(),userId:uid,name,phone,village,date,reason,status,receiver,tech,notes,createdAt:now,updatedAt:now,createdBy:curUser});
+      toast('ເພີ່ມສຳເລັດ ✅','ok');
+    }
+    closeModal();
+  }catch(e){toast('Error: '+e.message,'er');}
+  finally{btn.disabled=false;btn.innerHTML='💾 ບັນທຶກ';}
+}
+
+function delRec(id){
+  const r=records.find(x=>x.id===id);
+  showConf('ລຶບລາຍການ',`ລຶບ "${r?.name||id}"?\nລຶບຈາກ Firebase ດ້ວຍ`,async()=>{
+    try{await fbDel(id);toast('ລຶບສຳເລັດ','in');}catch(e){toast('ລຶບບໍ່ໄດ້: '+e.message,'er');}
+  });
+}
+
+/* ═══ FILTER & RENDER ═══ */
+function getFiltered(){
+  const q=document.getElementById('srch').value.toLowerCase();
+  const vf=document.getElementById('fvil').value;
+  const sf=document.getElementById('fsort').value;
+  let f=records.filter(r=>{
+    const mq=!q||[r.name,r.userId,r.village,r.phone,r.tech,r.receiver].some(v=>v?.toLowerCase().includes(q));
+    const mv=!vf||r.village===vf;
+    const ms=!statusFilter||r.status===statusFilter;
+    return mq&&mv&&ms;
+  });
+  if(sf==='nd')f.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  else if(sf==='od')f.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  else f.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  return f;
+}
+function doFilter(){const f=getFiltered();document.getElementById('rcnt').textContent=f.length;curView==='card'?renderCards(f):renderTable(f);}
+function setChip(el,s){statusFilter=s;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');doFilter();}
+function setView(v){curView=v;document.getElementById('v-card').classList.toggle('hidden',v!=='card');document.getElementById('v-table').classList.toggle('hidden',v!=='table');document.getElementById('vb-card').classList.toggle('on',v==='card');document.getElementById('vb-table').classList.toggle('on',v!=='card');doFilter();}
+function updateTabCnt(){document.getElementById('tab-cnt').textContent=records.length;}
+function fillVil(){const vs=[...new Set(records.map(r=>r.village).filter(Boolean))].sort();const sel=document.getElementById('fvil');const cur=sel.value;sel.innerHTML='<option value="">📍 ທຸກບ້ານ</option>'+vs.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('');}
+
+function renderCards(f){
+  const g=document.getElementById('rgrid');
+  if(!f.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ico">📭</div><div style="font-size:.95rem;font-weight:500">ບໍ່ພົບລາຍການ</div><div style="font-size:.82rem;margin-top:5px">ລອງຄົ້ນຫາໃໝ່ ຫຼື ເພີ່ມລາຍການ</div></div>`;return;}
+  const sb={received:`<span class="badge b-recv">📥 ຮັບ</span>`,progress:`<span class="badge b-prog">⚙️ ດຳ</span>`,completed:`<span class="badge b-done">✅ ສຳ</span>`};
+  g.innerHTML=f.map(r=>`
+  <div class="rcard">
+    <div class="rcard-head">
+      <div class="rid">#${esc(r.userId||r.id.slice(-6))}</div>
+      <div class="ract">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="delRec('${r.id}')">🗑️</button>
+      </div>
+    </div>
+    <div class="rname">${esc(r.name)}</div>
+    <div class="rphone">${esc(r.phone||'—')}</div>
+    <div class="rmeta">
+      <div class="mi"><div class="mi-lbl">📍 ບ້ານ</div><div class="mi-val">${esc(r.village||'—')}</div></div>
+      <div class="mi"><div class="mi-lbl">👷 ຜູ້ຮັບ</div><div class="mi-val">${esc(r.receiver||'—')}</div></div>
+      <div class="mi"><div class="mi-lbl">🔧 ຊ່າງ</div><div class="mi-val">${esc(r.tech||'—')}</div></div>
+      <div class="mi"><div class="mi-lbl">📅 ວັນທີ</div><div class="mi-val">${r.date||'—'}</div></div>
+    </div>
+    <div><span class="rbadge">⚠️ ${esc((REASONS[r.reason]||r.reason||'').split('(')[0].trim())}</span></div>
+    <div class="rfoot">
+      <div class="rdate">🕐 ${fmtDt(r.updatedAt||r.createdAt)}</div>
+      ${sb[r.status]||''}
+    </div>
+    ${r.notes?`<div style="margin-top:8px;font-size:.71rem;color:var(--t2);background:var(--b2);padding:6px 9px;border-radius:6px;border-left:2px solid var(--ac)">📝 ${esc(r.notes)}</div>`:''}
+    ${r.createdBy?`<div style="margin-top:5px;font-size:.65rem;color:var(--t3)">👤 ${esc(r.createdBy)}${r.updatedBy&&r.updatedBy!==r.createdBy?' · ✏️'+esc(r.updatedBy):''}</div>`:''}
+  </div>`).join('');
+}
+
+function renderTable(f){
+  const tb=document.getElementById('rtbody');
+  if(!f.length){tb.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--t3)">ບໍ່ພົບລາຍການ</td></tr>`;return;}
+  const sm={received:`<span class="badge b-recv" style="font-size:.67rem">📥</span>`,progress:`<span class="badge b-prog" style="font-size:.67rem">⚙️</span>`,completed:`<span class="badge b-done" style="font-size:.67rem">✅</span>`};
+  tb.innerHTML=f.map((r,i)=>`<tr>
+    <td style="color:var(--t3);font-family:var(--fm)">${i+1}</td>
+    <td style="font-family:var(--fm)">${esc(r.userId||'—')}</td>
+    <td style="font-weight:600">${esc(r.name)}</td>
+    <td style="font-family:var(--fm);font-size:.75rem">${esc(r.phone||'—')}</td>
+    <td>${esc(r.village||'—')}</td>
+    <td><span class="rbadge" style="font-size:.67rem">⚠️ ${esc((REASONS[r.reason]||r.reason||'').split('(')[0].trim())}</span></td>
+    <td>${sm[r.status]||''}</td>
+    <td>${esc(r.receiver||'—')}</td>
+    <td>${esc(r.tech||'—')}</td>
+    <td style="font-family:var(--fm);font-size:.72rem">${r.date||'—'}</td>
+    <td><div style="display:flex;gap:3px">
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${r.id}')">✏️</button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="delRec('${r.id}')">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+/* ═══ DASHBOARD ═══ */
+function updateDash(){
+  const tot=records.length,done=records.filter(r=>r.status==='completed').length,prog=records.filter(r=>r.status==='progress').length,recv=records.filter(r=>r.status==='received').length;
+  document.getElementById('s-tot').textContent=tot;document.getElementById('s-done').textContent=done;document.getElementById('s-prog').textContent=prog;document.getElementById('s-recv').textContent=recv;
+  document.getElementById('s-pct').textContent=tot?Math.round(done/tot*100)+'% ສຳເລັດ':'0%';
+  updateCharts();renderAct();renderRcv();
+}
+function initCharts(){
+  const dk=cfg.theme==='dark',tc=dk?'#8b949e':'#57606a',gc=dk?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  Chart.defaults.color=tc;
+  if(cRsn){cRsn.destroy();cRsn=null;}if(cSt){cSt.destroy();cSt=null;}
+  const cr=document.getElementById('ch-r'),cs=document.getElementById('ch-s');if(!cr||!cs)return;
+  cRsn=new Chart(cr.getContext('2d'),{type:'bar',data:{labels:Object.values(REASONS).map(l=>l.split('(')[0].trim()),datasets:[{data:Object.keys(REASONS).map(k=>records.filter(r=>r.reason===k).length),backgroundColor:[cfg.accent+'CC','#3b82f6CC','#22c55eCC','#a855f7CC','#ef4444CC','#f59e0bCC'],borderWidth:0,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:gc},ticks:{stepSize:1}},x:{grid:{display:false}}}}});
+  cSt=new Chart(cs.getContext('2d'),{type:'doughnut',data:{labels:['ຮັບເລື້ອງ','ດຳເນີນການ','ສຳເລັດ'],datasets:[{data:[0,0,0],backgroundColor:['#60a5fa','#fbbf24','#4ade80'],borderWidth:2,borderColor:dk?'#161b22':'#fff',hoverOffset:7}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:10},usePointStyle:true}}}}});
+  updateCharts();
+}
+function updateCharts(){
+  if(cRsn){cRsn.data.datasets[0].data=Object.keys(REASONS).map(k=>records.filter(r=>r.reason===k).length);cRsn.data.datasets[0].backgroundColor[0]=cfg.accent+'CC';cRsn.update('none');}
+  if(cSt){cSt.data.datasets[0].data=[records.filter(r=>r.status==='received').length,records.filter(r=>r.status==='progress').length,records.filter(r=>r.status==='completed').length];cSt.update('none');}
+}
+function renderAct(){
+  const el=document.getElementById('act-list');
+  const rc=[...records].sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||'')).slice(0,8);
+  if(!rc.length){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--t3)">ຍັງບໍ່ມີຂໍ້ມູນ</div>';return;}
+  el.innerHTML=rc.map(r=>`<div class="act-item"><div class="act-meta"><div class="act-name">${esc(r.name)} <span style="font-size:.65rem;color:var(--t3)">#${esc(r.userId||'')}</span></div><div class="act-det">📍 ${esc(r.village||'—')} · ${esc((REASONS[r.reason]||'').split('(')[0].trim()||'—')}</div></div><div class="act-time">${fmtDt(r.updatedAt||r.createdAt)}</div></div>`).join('');
+}
+function renderRcv(){
+  const el=document.getElementById('rcv-stats');
+  const cs=RECEIVERS.map(n=>({name:n,count:records.filter(r=>r.receiver===n).length}));
+  const mx=Math.max(...cs.map(c=>c.count),1);
+  el.innerHTML=cs.map(c=>`<div class="tr-row"><div class="tr-name">${c.name}</div><div class="tr-bar-w"><div class="tr-bar" style="width:${Math.round(c.count/mx*100)}%"></div></div><div class="tr-cnt">${c.count}</div></div>`).join('');
+}
+
+/* ═══ EXPORT ═══ */
+function expPDF(){
+  if(!records.length){toast('ບໍ່ມີຂໍ້ມູນ','er');return;}
+  const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  doc.setFontSize(14);doc.setFont('helvetica','bold');doc.text((cfg.appName||'FTTH Tracker')+' — Report',14,14);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(120);doc.text('Date: '+new Date().toLocaleString()+'  |  Total: '+records.length,14,20);
+  const rm={loss:'Loss',unstable:'Unstable',late:'Late',password:'Password',power:'No Power',expired:'Expired'},sm={received:'Received',progress:'In Progress',completed:'Completed'};
+  doc.autoTable({startY:25,head:[['#','User ID','Name','Phone','Village','Reason','Status','Receiver','Tech','Date']],
+    body:records.map((r,i)=>[i+1,r.userId||'',r.name||'',r.phone||'',r.village||'',rm[r.reason]||r.reason||'',sm[r.status]||r.status||'',r.receiver||'',r.tech||'',r.date||'']),
+    styles:{fontSize:7.5,cellPadding:2.5},headStyles:{fillColor:hexRgb(cfg.accent),textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[248,248,248]},columnStyles:{0:{cellWidth:7},1:{cellWidth:17}}});
+  const n=doc.internal.getNumberOfPages();for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(7);doc.setTextColor(150);doc.text(`${p}/${n}`,doc.internal.pageSize.width-18,doc.internal.pageSize.height-7);}
+  doc.save(`FTTH_${fd()}.pdf`);toast('PDF ດາວໂຫຼດ ✅','ok');
+}
+function expXLS(){
+  if(!records.length){toast('ບໍ່ມີຂໍ້ມູນ','er');return;}
+  const sm={received:'ຮັບເລື້ອງ',progress:'ດຳເນີນການ',completed:'ສຳເລັດ'};
+  const rows=records.map((r,i)=>({'#':i+1,'UserID':r.userId||'','ຊື່':r.name||'','ໂທ':r.phone||'','ບ້ານ':r.village||'','ສາເຫດ':REASONS[r.reason]||r.reason||'','ສະຖານະ':sm[r.status]||'','ຜູ້ຮັບ':r.receiver||'','ຊ່າງ':r.tech||'','ວັນທີ':r.date||'','ໝາຍເຫດ':r.notes||'','ສ້າງໂດຍ':r.createdBy||''}));
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[5,14,20,14,16,28,14,14,14,12,20,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Records');
+  const tot=records.length,dn=records.filter(r=>r.status==='completed').length;
+  const ws2=XLSX.utils.aoa_to_sheet([['FTTH Summary'],['Date:',new Date().toLocaleString()],[''],['Total',tot],['Completed',dn],['Progress',records.filter(r=>r.status==='progress').length],['Received',records.filter(r=>r.status==='received').length],['% Done',tot?Math.round(dn/tot*100)+'%':'0%']]);
+  ws2['!cols']=[{wch:16},{wch:26}];XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+  XLSX.writeFile(wb,`FTTH_${fd()}.xlsx`);toast('Excel ດາວໂຫຼດ ✅','ok');
+}
+function expJSON(){
+  if(!records.length){toast('ບໍ່ມີຂໍ້ມູນ','er');return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(records,null,2)],{type:'application/json'}));a.download=`FTTH_Backup_${fd()}.json`;a.click();toast('JSON ດາວໂຫຼດ ✅','ok');
+}
+function impJSON(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=async ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);if(!Array.isArray(d))throw new Error('Invalid');
+      showConf('Import JSON',`Import ${d.length} ລາຍການ? ທັບຂໍ້ມູນ Firebase ທັງໝົດ.`,async()=>{
+        if(demoMode){records=d;saveDemo();doFilter();updateDash();updateTabCnt();}
+        else{setSyncPill('busy');const b={};d.forEach(r=>{if(r.id)b[r.id]=r;});await db.ref('ftth_records').set(b);}
+        toast(`Import ${d.length} ລາຍການ ✅`,'ok');
+      });
+    }catch{toast('JSON ບໍ່ຖືກຕ້ອງ','er');}
+    e.target.value='';
+  };r.readAsText(f);
+}
+async function clearAll(){
+  showConf('ລ້າງທັງໝົດ','⚠️ ລຶບຂໍ້ມູນທັງໝົດ ລວມ Firebase?\nບໍ່ສາມາດກູ້ຄືນ!',async()=>{
+    if(demoMode){records=[];saveDemo();doFilter();updateDash();updateTabCnt();}
+    else{setSyncPill('busy');await db.ref('ftth_records').remove();}
+    toast('ລ້າງ ✅','in');
+  });
+}
+
+/* ═══ CONFIRM / TOAST ═══ */
+function showConf(t,m,cb){document.getElementById('conf-title').textContent=t;document.getElementById('conf-msg').innerHTML=m.replace(/\n/g,'<br/>');document.getElementById('conf-ok').onclick=()=>{closeConf();if(cb)cb();};document.getElementById('conf-overlay').classList.add('show');}
+function closeConf(){document.getElementById('conf-overlay').classList.remove('show');}
+function toast(msg,t='in'){const ic={ok:'✅',er:'❌',in:'ℹ️'};const el=document.createElement('div');el.className=`toast ${t}`;el.innerHTML=`<span>${ic[t]||'ℹ️'}</span><span>${msg}</span>`;document.getElementById('tcon').appendChild(el);setTimeout(()=>{el.style.animation='tout .3s ease forwards';setTimeout(()=>el.remove(),320);},3500);}
+
+/* ═══ UTILS ═══ */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDt(iso){if(!iso)return '—';try{return new Date(iso).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return iso;}}
+function fd(){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+/* ═══ DEMO DATA ═══ */
+function seedDemo(){
+  records=[
+    {id:'REC001',userId:'USR-001',name:'ສີທອນ ສຸວັນ',phone:'020-5555-1001',village:'ໂດນຕາລາດ',date:'2026-03-10',reason:'loss',status:'completed',receiver:'ຄອນສະຫວັນ',tech:'ສົມສາກ',notes:'',createdAt:'2026-03-10T08:00:00Z',updatedAt:'2026-03-11T14:00:00Z',createdBy:'admin'},
+    {id:'REC002',userId:'USR-002',name:'ດາລາ ພັນທະວົງ',phone:'020-7777-2002',village:'ປາກຊອງ',date:'2026-03-12',reason:'unstable',status:'progress',receiver:'ຊີກັນດາ',tech:'ເຢຍ',notes:'ກຳລັງດຳເນີນ',createdAt:'2026-03-12T10:00:00Z',updatedAt:'2026-03-13T09:00:00Z',createdBy:'admin'},
+    {id:'REC003',userId:'USR-003',name:'ພຸດທະໄຊ ສີດາ',phone:'020-2222-3003',village:'ນາຊາຍທອງ',date:'2026-03-14',reason:'password',status:'received',receiver:'ພູເງິນ',tech:'',notes:'',createdAt:'2026-03-14T11:00:00Z',updatedAt:'2026-03-14T11:00:00Z',createdBy:'admin'},
+    {id:'REC004',userId:'USR-004',name:'ນາງ ຂັນທອງ',phone:'020-9999-4004',village:'ໂດນຕາລາດ',date:'2026-03-15',reason:'power',status:'completed',receiver:'ພອນຊະນະ',tech:'ຄຳ',notes:'ໄຟຕັດ ແກ້ໄຂ',createdAt:'2026-03-15T07:00:00Z',updatedAt:'2026-03-16T15:00:00Z',createdBy:'admin'},
+    {id:'REC005',userId:'USR-005',name:'ສຸລິຍາ ພົມມາ',phone:'020-3333-5005',village:'ໂດນຕາລາດ',date:'2026-03-18',reason:'expired',status:'received',receiver:'ສຸກໄຂ່ແກ້ວ',tech:'',notes:'',createdAt:'2026-03-18T09:00:00Z',updatedAt:'2026-03-18T09:00:00Z',createdBy:'admin'},
+    {id:'REC006',userId:'USR-006',name:'ອານຸສອນ ຄຳດຸ',phone:'020-6666-6006',village:'ປາກຊອງ',date:'2026-04-01',reason:'loss',status:'progress',receiver:'ຄອນສະຫວັນ',tech:'ສົມສາກ',notes:'ລໍຖ້າອຸປະກອນ',createdAt:'2026-04-01T08:00:00Z',updatedAt:'2026-04-02T10:00:00Z',createdBy:'admin'},
+  ];
+  saveDemo();
+}
+</script>
+</body>
+</html>
