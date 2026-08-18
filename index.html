@@ -64,22 +64,22 @@ img{max-width:100%;display:block}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-full{grid-column:1/-1}
 @media(max-width:480px){.form-grid{grid-template-columns:1fr}}
-.hidden{display:none!important}
-.divider{height:1px;background:var(--br);margin:12px 0}
+ซ่อนไว้{ แสดงผล : ไม่มี!สำคัญ}
+.divider { height : 1px ; background : var ( -- br ) ; margin : 12px 0 }​​ 
 
-/* SETUP */
-#scr-setup{position:fixed;inset:0;z-index:1000;background:var(--b0);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
-.sw-wrap{width:100%;max-width:500px;margin:auto}
-.sw-logo{text-align:center;margin-bottom:24px}
-.sw-ico{width:60px;height:60px;background:var(--ac);border-radius:15px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:10px;box-shadow:0 8px 24px rgba(34,211,238,.3)}
-.sw-logo h1{font-size:1.4rem;font-weight:700;letter-spacing:-.02em}.sw-logo p{color:var(--t2);font-size:.82rem;margin-top:3px}
-.tabs{display:flex;background:var(--b2);border:1px solid var(--br);border-radius:var(--r);padding:3px;margin-bottom:16px;gap:3px}
-.tab-btn{flex:1;padding:8px;border-radius:7px;background:transparent;color:var(--t2);font-size:.82rem;font-weight:600;transition:all var(--tr);text-align:center}
-.tab-btn.on{background:var(--b1);color:var(--t1);box-shadow:var(--cs)}
-.sw-card{background:var(--b1);border:1px solid var(--brs);border-radius:var(--rl);padding:24px;box-shadow:var(--sh)}
-.steps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px;counter-reset:s}
-.step{display:flex;gap:11px;align-items:flex-start;background:var(--b2);border:1px solid var(--br);border-radius:9px;padding:11px 13px;counter-increment:s}
-.step::before{content:counter(s);min-width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+/* การตั้งค่า */
+# scr-setup { position : fixed ; inset : 0 ; z-index : 1000 ; background : var ( --b0 ) ; display : flex ; align-items : center ; justify-content : center ; padding : 16 px ; overflow-y : auto }
+.sw -wrap { width : 100 % ; max- width : 500px ; margin : auto }
+.sw -logo { text - align : center ; margin-bottom : 24px }
+.sw -ico { width : 60px ; height : 60px ; background : var ( --ac ) ; border -radius : 15px ; display : inline -flex ; align -items : center ; justify -content : center ; font-size : 28px ; margin- bottom : 10px ; box - shadow : 0 8px 24px rgba ( 34 , 211 , 238 , .3 ) }   
+.sw -logo  h1 { font-size : 1.4 rem ; font-weight : 700 ; letter-spacing : -.02 em } .sw-logo  p { color : var (-- t2 ) ; font -size : .82 rem ; margin-top : 3 px }
+. แท็บ{ การแสดงผล : flex ; พื้นหลัง : var ( --b2 ) ; ขอบ : 1px solid var ( --br ) ; ขอบโค้งมน : var ( --r )  ;ระยะห่างภายใน : 3px ; ระยะ ขอบด้านล่าง : 16px ; ช่องว่าง : 3px } 
+.tab -btn { flex : 1 ; padding : 8px ; border-radius : 7px ; background : transparent ; color : var ( -- t2 ) ; font-size : 0.82rem ; font-weight : 600 ; transition : all var ( --tr ) ; text - align : center } 
+. แท็ บ-btn บน{ พื้นหลัง : var ( --b1 ) ; สี : var ( --t1 ) ; กล่องเงา : var ( --cs ) }
+.sw -card { background : var ( --b1 ) ; border : 1px solid var ( --brs ) ; border-radius : var ( -- rl ) ; padding : 24px ; box-shadow : var ( -- sh  ) } 
+. ขั้นตอน{ แสดงผล : flex ; ทิศทาง flex : column ; ช่องว่าง: 9px ;ระยะขอบล่าง : 18px ; รีเซ็ตตัวนับ: s }
+.step { display : flex ; gap : 11px ; align - items : flex-start ; background : var ( -- b2 ) ; border : 1px solid var ( -- br ) ; border - radius : 9px ; padding : 11px 13px ; counter- increment : s }   
+.step :: before { content : counter ( s ) ; min-width : 22px ; height : 22px ; border-radius : 50 % ; background : var ( --ac ) ; color : #fff; font-size : 0.7rem ; font - weight : 700 ; display : flex ; align -items : center ; justify-content : center ; flex-shrink : 0 ; margin -top : 1px }
 .step-t{font-size:.8rem;line-height:1.7}.step-t a{color:var(--ac);font-weight:600}.step-t code{background:var(--b3);padding:1px 6px;border-radius:4px;font-family:var(--fm);font-size:.74rem}.step-t strong{color:var(--ac)}
 .info-box{background:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:10px 13px;font-size:.78rem;color:var(--ac);line-height:1.7;margin-top:13px}
 .err-box{color:#ef4444;font-size:.78rem;margin-top:7px;padding:8px 11px;background:rgba(239,68,68,.1);border-radius:7px;border:1px solid rgba(239,68,68,.25);display:none}
